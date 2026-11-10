@@ -238,15 +238,18 @@ impl<'run, 'src> Parser<'run, 'src> {
     Err(self.unexpected_token()?)
   }
 
-  /// Return an unexpected token error if the next token is not an EOL
-  fn expect_eol(&mut self) -> CompileResult<'src> {
-    self.accept(Comment)?;
+  /// Return an unexpected token error if the next token is not an EOL,
+  /// and return any comment that precedes the EOL
+  fn expect_eol(&mut self) -> CompileResult<'src, Option<Token<'src>>> {
+    let comment = self.accept(Comment)?;
 
     if self.next_is(Eof) {
-      return Ok(());
+      return Ok(comment);
     }
 
-    self.expect(Eol).map(|_| ())
+    self.expect(Eol)?;
+
+    Ok(comment)
   }
 
   fn expect_keyword(&mut self, expected: Keyword) -> CompileResult<'src> {
@@ -1398,9 +1401,12 @@ impl<'run, 'src> Parser<'run, 'src> {
       dependencies.append(&mut subsequents);
     }
 
-    if self.next_are(&[Comment, Eol, Indent]) || self.next_are(&[Eol, Indent]) {
-      self.expect_eol()?;
-    }
+    let trailing_comment =
+      if self.next_are(&[Comment, Eol, Indent]) || self.next_are(&[Eol, Indent]) {
+        self.expect_eol()?
+      } else {
+        None
+      };
 
     let body = self.parse_body()?;
 
@@ -1454,6 +1460,7 @@ impl<'run, 'src> Parser<'run, 'src> {
       quiet,
       recipe_path: None,
       shebang: shebang || script,
+      trailing_comment: trailing_comment.map(|comment| comment.lexeme().trim_end()),
       variable_references: HashSet::new(),
     })
   }
