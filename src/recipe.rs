@@ -429,6 +429,19 @@ impl<'src> Recipe<'src> {
           }
         }
         Err(io_error) => {
+          // The OS reports `NotFound` if the shell does not exist, but also if
+          // the working directory does not exist, since the shell cannot be
+          // spawned inside of it. Check for the latter case first, since the
+          // error message would otherwise misleadingly blame the shell.
+          if io_error.kind() == io::ErrorKind::NotFound
+            && let Some(working_directory) = &working_directory
+            && !working_directory.exists()
+          {
+            return Err(Error::WorkingDirectoryNotFound {
+              recipe: self.name(),
+              working_directory: working_directory.clone(),
+            });
+          }
           return Err(Error::ShellIo {
             io_error,
             recipe: self.name(),

@@ -543,3 +543,22 @@ fn false_no_cd_does_not_conflict_with_working_directory() {
     .stdout("baz\n")
     .success();
 }
+
+/// Test that when a `[working-directory]` attribute names a directory that
+/// does not exist, the error message blames the working directory rather than
+/// the shell
+#[test]
+fn attribute_missing_directory_error_message() {
+  Test::new()
+    .justfile(
+      "
+        [working-directory('this-directory-does-not-exist')]
+        foo:
+          echo foo
+      ",
+    )
+    .stderr_regex(
+      "echo foo\nerror: recipe `foo` could not be run because its working directory `.*/?this-directory-does-not-exist` does not exist\n",
+    )
+    .failure();
+}

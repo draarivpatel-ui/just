@@ -350,6 +350,10 @@ pub(crate) enum Error<'src> {
   UnstableFeature {
     unstable_feature: UnstableFeature,
   },
+  WorkingDirectoryNotFound {
+    working_directory: Utf8PathBuf,
+    recipe: &'src str,
+  },
   WriteJustfile {
     justfile: Utf8PathBuf,
     io_error: io::Error,
@@ -1114,6 +1118,16 @@ impl ColorDisplay for Error<'_> {
         write!(
           f,
           "{unstable_feature}, invoke `just` with `--unstable`, set the `JUST_UNSTABLE` environment variable, or add `set unstable` to your `justfile` to enable unstable features",
+        )?;
+      }
+      WorkingDirectoryNotFound {
+        working_directory,
+        recipe,
+      } => {
+        write!(
+          f,
+          "recipe `{recipe}` could not be run because its working directory \
+          `{working_directory}` does not exist",
         )?;
       }
       WriteJustfile { justfile, io_error } => {
